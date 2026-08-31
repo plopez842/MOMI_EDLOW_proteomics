@@ -1,7 +1,7 @@
 find_project_root <- function(start = getwd()) {
   path <- normalizePath(start, mustWork = TRUE)
   repeat {
-    if (file.exists(file.path(path, "DESCRIPTION")) && dir.exists(file.path(path, "figures"))) {
+    if (file.exists(file.path(path, "DESCRIPTION")) && dir.exists(file.path(path, "Figure_1"))) {
       return(path)
     }
     parent <- dirname(path)

@@ -2,7 +2,7 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 script <- sub("^--file=", "", args[grep("^--file=", args)][1])
-root <- normalizePath(file.path(dirname(script), "..", ".."), mustWork = TRUE)
+root <- normalizePath(file.path(dirname(script), ".."), mustWork = TRUE)
 source(file.path(root, "R", "io.R"))
 source_project_functions(root)
 create_output_directories(root)
@@ -100,7 +100,7 @@ save_plot(panel_e, file.path(paths$plots, "figure_01E_som_trajectories.pdf"), 8,
 representatives <- choose_representative_aptamers(inputs$samples, inputs$proteins, inputs$annotations)
 reactome <- run_reactome_ora(som_result$protein_cluster, representatives)
 save_table(reactome, file.path(paths$tables, "som_reactome_enrichment.csv"))
-reactome_panel <- readr::read_csv(file.path(root, "config", "figure1_reactome_panel.csv"), show_col_types = FALSE)
+reactome_panel <- readr::read_csv(file.path(root, "Figure_1", "pathways_shown.csv"), show_col_types = FALSE)
 panel_f <- plot_reactome_panel(reactome, reactome_panel)
 save_plot(panel_f, file.path(paths$plots, "figure_01F_reactome_pathways.pdf"), 12, 5)
 

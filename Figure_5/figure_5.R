@@ -2,7 +2,7 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 script <- sub("^--file=", "", args[grep("^--file=", args)][1])
-root <- normalizePath(file.path(dirname(script), "..", ".."), mustWork = TRUE)
+root <- normalizePath(file.path(dirname(script), ".."), mustWork = TRUE)
 source(file.path(root, "R", "io.R"))
 source_project_functions(root)
 create_output_directories(root)
@@ -73,9 +73,9 @@ panel_c <- patchwork::wrap_plots(
 )
 save_plot(panel_c, file.path(paths$plots, "figure_05C_acute_gsea_counts.pdf"), 8, 3.5)
 
-pathway_panel <- readr::read_csv(file.path(root, "config", "vaccine_pathway_panel.csv"), show_col_types = FALSE)
-v1_panel <- filter_pathway_panel(v1_gsea, pathway_panel, "figure5", fdr = 0.25)
-v2_panel <- filter_pathway_panel(v2_gsea, pathway_panel, "figure5", fdr = 0.25)
+pathway_panel <- readr::read_csv(file.path(root, "Figure_5", "pathways_shown.csv"), show_col_types = FALSE)
+v1_panel <- filter_pathway_panel(v1_gsea, pathway_panel, fdr = 0.25)
+v2_panel <- filter_pathway_panel(v2_gsea, pathway_panel, fdr = 0.25)
 save_table(dplyr::bind_rows(V1 = v1_panel, V2 = v2_panel, .id = "dose"), file.path(paths$tables, "acute_kegg_gsea_main_figure_panel.csv"))
 panel_d <- patchwork::wrap_plots(
   list(

@@ -2,7 +2,7 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 script <- sub("^--file=", "", args[grep("^--file=", args)][1])
-root <- normalizePath(file.path(dirname(script), "..", ".."), mustWork = TRUE)
+root <- normalizePath(file.path(dirname(script), ".."), mustWork = TRUE)
 source(file.path(root, "R", "io.R"))
 source_project_functions(root)
 create_output_directories(root)
@@ -10,13 +10,13 @@ create_output_directories(root)
 parameters <- analysis_parameters()
 set.seed(parameters$seed)
 inputs <- load_analysis_inputs(root)
-paths <- figure_paths(4, root)
+paths <- figure_paths(3, root)
 cache <- file.path(paths$cache, paste0("nperm_", parameters$n_perm, "_k", parameters$gam_k))
 
 analysis <- run_vaccine_gam_analysis(
   inputs$samples,
   inputs$proteins,
-  dose = "V2",
+  dose = "V1",
   n_perm = parameters$n_perm,
   k = parameters$gam_k,
   cores = parameters$cores,
@@ -25,35 +25,35 @@ analysis <- run_vaccine_gam_analysis(
 )
 statistics <- analysis$stats
 statistics$gene <- gene_symbols(statistics$protein, inputs$annotations)
-save_table(statistics, file.path(paths$tables, "dose2_vs_baseline_gam_permutation.csv"))
+save_table(statistics, file.path(paths$tables, "dose1_vs_baseline_gam_permutation.csv"))
 
 selected <- vaccine_panel_proteins(analysis, inputs$annotations)
-if (!length(selected)) selected <- head(statistics$protein[order(statistics$pvalue)], 30L)
+if (!length(selected)) selected <- head(statistics$protein[order(statistics$pvalue)], 13L)
 masked_log2fc <- mask_unobserved_weeks(analysis$log2fc, analysis$baseline, analysis$vaccinated)
 panel_a <- plot_log2fc_heatmap(
   masked_log2fc,
   inputs$annotations,
   selected,
-  "Differentially expressed proteins after Dose 2"
+  "Differentially expressed proteins after Dose 1"
 )
-save_plot(panel_a, file.path(paths$plots, "figure_04A_dose2_log2fc_heatmap.pdf"), 8, 6)
+save_plot(panel_a, file.path(paths$plots, "figure_03A_dose1_log2fc_heatmap.pdf"), 8, 4)
 
 panel_b_proteins <- proteins_for_genes(
-  c("CXCL3", "FABP5", "MMP7", "ANXA1", "OLR1", "S100A9"),
+  c("IL1RL1", "CXCL3", "ZNF174"),
   inputs$annotations,
   rownames(analysis$log2fc)
 )
-panel_b <- plot_vaccine_proteins(analysis$comparison, panel_b_proteins, inputs$annotations, "V2")
-save_plot(panel_b, file.path(paths$plots, "figure_04B_dose2_protein_trajectories.pdf"), 11, 5)
+panel_b <- plot_vaccine_proteins(analysis$comparison, panel_b_proteins, inputs$annotations, "V1")
+save_plot(panel_b, file.path(paths$plots, "figure_03B_dose1_protein_trajectories.pdf"), 9, 3)
 
 representatives <- choose_representative_aptamers(inputs$samples, inputs$proteins, inputs$annotations)
 observed_columns <- colSums(!is.na(masked_log2fc)) > 0
 gsea <- run_gsea_matrix(analysis$log2fc[, observed_columns, drop = FALSE], representatives, parameters$seed)
-save_table(gsea, file.path(paths$tables, "dose2_kegg_gsea_all_weeks.csv"))
-pathway_panel <- readr::read_csv(file.path(root, "config", "vaccine_pathway_panel.csv"), show_col_types = FALSE)
-panel_results <- filter_pathway_panel(gsea, pathway_panel, "figure4", fdr = 0.25)
-save_table(panel_results, file.path(paths$tables, "dose2_kegg_gsea_main_figure_panel.csv"))
-panel_c <- plot_gsea_bubbles(panel_results, "Dose 2 versus baseline KEGG GSEA")
-save_plot(panel_c, file.path(paths$plots, "figure_04C_dose2_kegg_gsea.pdf"), 11, 10)
+save_table(gsea, file.path(paths$tables, "dose1_kegg_gsea_all_weeks.csv"))
+pathway_panel <- readr::read_csv(file.path(root, "Figure_3", "pathways_shown.csv"), show_col_types = FALSE)
+panel_results <- filter_pathway_panel(gsea, pathway_panel, fdr = 0.25)
+save_table(panel_results, file.path(paths$tables, "dose1_kegg_gsea_main_figure_panel.csv"))
+panel_c <- plot_gsea_bubbles(panel_results, "Dose 1 versus baseline KEGG GSEA")
+save_plot(panel_c, file.path(paths$plots, "figure_03C_dose1_kegg_gsea.pdf"), 10, 6)
 
-message("Figure 4 panels written to: ", paths$plots)
+message("Figure 3 panels written to: ", paths$plots)

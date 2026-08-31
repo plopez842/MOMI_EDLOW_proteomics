@@ -2,7 +2,7 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 script <- sub("^--file=", "", args[grep("^--file=", args)][1])
-root <- normalizePath(file.path(dirname(script), "..", ".."), mustWork = TRUE)
+root <- normalizePath(file.path(dirname(script), ".."), mustWork = TRUE)
 source(file.path(root, "R", "io.R"))
 source_project_functions(root)
 create_output_directories(root)
@@ -44,7 +44,7 @@ weekly_gsea <- run_gsea_matrix(weekly_log2fc, representatives, parameters$seed +
 
 all_gsea <- dplyr::bind_rows(trimester_gsea, weekly_gsea)
 save_table(all_gsea, file.path(paths$tables, "kegg_gsea_all_comparisons.csv"))
-panel <- readr::read_csv(file.path(root, "config", "figure2_pathway_panel.csv"), show_col_types = FALSE)
+panel <- readr::read_csv(file.path(root, "Figure_2", "pathways_shown.csv"), show_col_types = FALSE)
 panel_results <- filter_pathway_panel(all_gsea, panel, fdr = 0.25)
 save_table(panel_results, file.path(paths$tables, "kegg_gsea_main_figure_panel.csv"))
 

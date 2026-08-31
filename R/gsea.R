@@ -99,15 +99,11 @@ run_reactome_ora <- function(protein_clusters, representative_mapping) {
   dplyr::bind_rows(results)
 }
 
-filter_pathway_panel <- function(gsea_results, panel, figure_column = NULL, fdr = 0.25) {
+filter_pathway_panel <- function(gsea_results, panel, fdr = 0.25) {
   if (!nrow(gsea_results)) return(gsea_results)
-  selected_panel <- panel
-  if (!is.null(figure_column) && figure_column %in% names(panel)) {
-    selected_panel <- panel[as.logical(panel[[figure_column]]), , drop = FALSE]
-  }
   output <- dplyr::inner_join(
     gsea_results,
-    selected_panel,
+    panel,
     by = c("Description" = "pathway")
   )
   output$significant <- is.finite(output$p.adjust) & output$p.adjust < fdr

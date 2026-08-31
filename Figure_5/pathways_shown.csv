@@ -1,0 +1,36 @@
+pathway,category,display_order
+Endocytosis,Cell growth and death,1
+Efferocytosis,Cell growth and death,2
+Cellular senescence,Cell growth and death,3
+Regulation of actin cytoskeleton,Cellular motility and signaling,4
+Focal adhesion,Cellular motility and signaling,6
+Tight junction,Cellular motility and signaling,7
+Thyroid hormone signaling pathway,Endocrine system,8
+Relaxin signaling pathway,Endocrine system,9
+Prolactin signaling pathway,Endocrine system,10
+Oxytocin signaling pathway,Endocrine system,11
+Insulin signaling pathway,Endocrine system,12
+GnRH signaling pathway,Endocrine system,13
+Glucagon signaling pathway,Endocrine system,14
+Adipocytokine signaling pathway,Endocrine system,15
+Chemokine signaling pathway,Immune system,18
+Toll-like receptor signaling pathway,Immune system,19
+Th17 cell differentiation,Immune system,20
+T cell receptor signaling pathway,Immune system,21
+Platelet activation,Immune system,22
+Neutrophil extracellular trap formation,Immune system,23
+Natural killer cell mediated cytotoxicity,Immune system,24
+Leukocyte transendothelial migration,Immune system,25
+Fc gamma R-mediated phagocytosis,Immune system,26
+Fc epsilon RI signaling pathway,Immune system,27
+Complement and coagulation cascades,Immune system,28
+C-type lectin receptor signaling pathway,Immune system,29
+TNF signaling pathway,Signal transduction,30
+Phospholipase D signaling pathway,Signal transduction,32
+NF-kappa B signaling pathway,Signal transduction,33
+ErbB signaling pathway,Signal transduction,37
+Wnt signaling pathway,Signal transduction,38
+VEGF signaling pathway,Signal transduction,39
+TGF-beta signaling pathway,Signal transduction,40
+mTOR signaling pathway,Signal transduction,41
+Apelin signaling pathway,Signal transduction,42
