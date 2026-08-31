@@ -1,0 +1,24 @@
+.DS_Store
+.RData
+.Rhistory
+.Rproj.user/
+*.Rproj
+
+# Participant-level and intermediate data are never committed.
+data/processed/*
+!data/processed/.gitkeep
+results/cache/*
+!results/cache/.gitkeep
+
+# Generated outputs.
+results/figures/*
+results/tables/*
+
+# Notebook and editor artifacts.
+.ipynb_checkpoints/
+.idea/
+.vscode/
+
+# Logs.
+*.log
+slurm-*.out

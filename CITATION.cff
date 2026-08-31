@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the associated article."
+title: "MOMI-EDLOW proteomics figure workflows"
+type: software
+authors:
+  - family-names: "Lopez Zapana"
+    given-names: "Paola A."
+repository-code: "https://github.com/plopez842/MOMI_EDLOW_proteomics"
+preferred-citation:
+  type: article
+  title: "Maternal proteome profiling reveals dynamic gestational age-specific responses to de novo vaccination"
+  authors:
+    - family-names: "Lopez Zapana"
+      given-names: "Paola A."
+    - family-names: "Shook"
+      given-names: "Lydia L."
+    - family-names: "Joughin"
+      given-names: "Brian A."
+    - family-names: "Jasset"
+      given-names: "Olyvia J."
+    - family-names: "Liu"
+      given-names: "Zhaojing A."
+    - family-names: "Yinger"
+      given-names: "Rachel V."
+    - family-names: "Acharya"
+      given-names: "Kalpana D."
+    - family-names: "Gray"
+      given-names: "Kathryn J."
+    - family-names: "Elovitz"
+      given-names: "Michal A."
+    - family-names: "Lauffenburger"
+      given-names: "Douglas A."
+    - family-names: "Edlow"
+      given-names: "Andrea G."
+  journal: "The Journal of Immunology"
+  year: 2025
+  doi: "10.1093/jimmun/vkaf298"

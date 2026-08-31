@@ -1,0 +1,31 @@
+Package: MOMIEDLOWproteomics
+Type: Project
+Title: Reproducible MOMI-EDLOW Proteomics Figure Workflows
+Version: 1.0.0
+Authors@R: person("Paola A.", "Lopez Zapana", role = c("aut", "cre"))
+Description: Analysis and plotting workflows for the main figures in Lopez
+    Zapana et al., The Journal of Immunology (2025), doi:10.1093/jimmun/vkaf298.
+License: file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.3.0)
+Imports:
+    circlize,
+    clusterProfiler,
+    ComplexHeatmap,
+    dplyr,
+    fs,
+    ggplot2,
+    ggrepel,
+    ggsci,
+    glmnet,
+    here,
+    kohonen,
+    limma,
+    mgcv,
+    org.Hs.eg.db,
+    patchwork,
+    ReactomePA,
+    readr,
+    ropls,
+    scales,
+    tidyr
