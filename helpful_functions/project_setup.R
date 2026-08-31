@@ -14,6 +14,7 @@
 
 source_analysis_functions <- function(project_directory = getwd()) {
   helper_files <- c(
+    "manuscript_pathways.R",
     "statistical_models.R",
     "pathway_analysis.R",
     "plotting_functions.R",
@@ -217,18 +218,6 @@ prepare_figure <- function(figure_number, project_directory = getwd()) {
   )
 }
 
-# Read one curated pathway list. Figure scripts do not know its file location.
-read_pathways_shown <- function(figure_number, project_directory = getwd()) {
-  readr::read_csv(
-    file.path(
-      project_directory,
-      "pathway_lists",
-      sprintf("figure_%d.csv", figure_number)
-    ),
-    show_col_types = FALSE
-  )
-}
-
 # Build a plot path without exposing folders or file extensions in figure code.
 result_plot_file <- function(output, file_name) {
   file.path(output$plots, paste0(file_name, ".pdf"))
@@ -261,7 +250,7 @@ use_cached_result <- function(output, file_name, calculate) {
 
 # Save one manuscript result table. Figure scripts provide only a readable name.
 save_results_table <- function(table, output, file_name) {
-  save_table(table, file.path(output$tables, paste0(file_name, ".csv")))
+  save_table(table, file.path(output$tables, paste0(file_name, ".tsv")))
 }
 
 # Save one manuscript plot. Figure scripts provide only a readable name and size.
@@ -290,9 +279,9 @@ trimester_from_weeks <- function(weeks) {
   )
 }
 
-# Save a data frame as a CSV and create its parent folder if needed.
+# Save a data frame as a tab-separated table and create its parent folder.
 save_table <- function(table, output_file) {
   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
-  readr::write_csv(as.data.frame(table), output_file, na = "")
+  readr::write_tsv(as.data.frame(table), output_file, na = "")
   invisible(output_file)
 }

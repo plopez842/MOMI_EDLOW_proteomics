@@ -25,7 +25,7 @@ results/
 ```
 
 - `figures/` contains manuscript-panel PDFs.
-- `tables/` contains model statistics, protein lists, and enrichment results as CSV files.
+- `tables/` contains model statistics, protein lists, and enrichment results as TSV files.
 - `cache/` contains restartable intermediate calculations for computationally intensive permutation analyses.
 
 Generated outputs are excluded from Git. Run `Rscript scripts/create_folders.R` from the repository root to create the empty structure, or run any figure script and its required output directories will be created automatically.

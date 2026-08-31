@@ -136,7 +136,7 @@ save_results_table(
   "dose2_kegg_gsea_all_weeks"
 )
 
-pathways_shown <- read_pathways_shown(4)
+pathways_shown <- pathways_for_figure(4)
 figure_pathway_results <- filter_pathway_panel(
   dose_2_gsea,
   pathways_shown,

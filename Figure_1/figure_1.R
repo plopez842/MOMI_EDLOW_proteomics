@@ -231,7 +231,7 @@ save_results_table(
   "som_reactome_enrichment"
 )
 
-pathways_shown <- read_pathways_shown(1)
+pathways_shown <- pathways_for_figure(1)
 figure_1f <- plot_reactome_panel(reactome_results, pathways_shown)
 save_results_plot(
   figure_1f,

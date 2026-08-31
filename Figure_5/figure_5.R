@@ -182,7 +182,7 @@ save_results_plot(
 
 # 6. Selected acute pathways (Figure 5D) ----
 
-pathways_shown <- read_pathways_shown(5)
+pathways_shown <- pathways_for_figure(5)
 dose_1_pathways_shown <- filter_pathway_panel(
   dose_1_gsea,
   pathways_shown,

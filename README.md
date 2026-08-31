@@ -28,7 +28,6 @@ MOMI_EDLOW_proteomics/
 ├── Figure_4/              Figure 4 script
 ├── Figure_5/              Figure 5 script
 ├── helpful_functions/     Clearly named shared analysis and plotting functions
-├── pathway_lists/         Curated pathways shown in each manuscript figure
 ├── data/                  Data instructions; participant data are not in Git
 ├── results/               Generated plots, tables, and saved intermediate results
 ├── scripts/               Setup, data check, and run-all scripts
@@ -77,7 +76,8 @@ The output folders are created automatically. `Rscript scripts/create_folders.R`
 
 Every figure script begins with its purpose, manuscript panels, outputs, and exact run command. Numbered section headings then follow the scientific analysis in order. Input locations, pathway-table locations, and file extensions appear only in `project_setup.R`, not in the figure scripts.
 
-- `project_setup.R`: the single location for inputs, pathway tables, settings, and output folders
+- `project_setup.R`: the single location for inputs, settings, and output folders
+- `manuscript_pathways.R`: curated pathways shown in Figures 1-5
 - `statistical_models.R`: LASSO, PLSDA, GAMs, permutations, SOM, and acute models
 - `pathway_analysis.R`: KEGG GSEA and Reactome enrichment
 - `plotting_functions.R`: manuscript plots and colors

@@ -121,7 +121,7 @@ save_results_table(
 
 # 4. Select manuscript pathways and make Figure 2D ----
 
-pathways_shown <- read_pathways_shown(2)
+pathways_shown <- pathways_for_figure(2)
 figure_pathway_results <- filter_pathway_panel(
   all_gsea_results,
   pathways_shown,
