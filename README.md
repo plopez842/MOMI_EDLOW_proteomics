@@ -28,15 +28,20 @@ MOMI_EDLOW_proteomics/
 ├── Figure_4/              Figure 4 script
 ├── Figure_5/              Figure 5 script
 ├── helpful_functions/     Clearly named shared analysis and plotting functions
-├── data/                  Data instructions; participant data are not in Git
 ├── results/               Generated plots, tables, and saved intermediate results
 ├── scripts/               Setup, data check, and run-all scripts
 └── tests/                 Small end-to-end test
 ```
 
-## Analysis inputs
+## Private analysis inputs
 
-Participant-level files are not included in Git. Access, placement, and required columns are documented in [`data/README.md`](data/README.md).
+The analysis-ready RDS objects were created locally from patient information provided by the clinical collaborators. They are not included in this repository and are not distributed through [ImmPort study SDY2913](https://immport.org/shared/study/SDY2913/summary); SDY2913 is linked only as the public study record.
+
+Before running the code, set `MOMI_INPUT_DIR` to the private local folder containing those objects. Input file names and required columns are checked centrally by `helpful_functions/project_setup.R`.
+
+```bash
+export MOMI_INPUT_DIR=/private/local/input_folder
+```
 
 ## Run the analysis
 

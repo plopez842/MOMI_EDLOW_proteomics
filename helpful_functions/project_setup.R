@@ -60,54 +60,44 @@ analysis_parameters <- function() {
 }
 
 
-# Locate and read the analysis data ----
+# Locate and read the private analysis inputs ----
 
-# By default, data are read from data/processed/. MOMI_DATA_DIR can point to a
-# different folder so participant-level data do not need to be copied into Git.
-data_directory <- function(project_directory = getwd()) {
-  external_data_directory <- Sys.getenv("MOMI_DATA_DIR", unset = "")
+# The analysis-ready objects were created locally from clinician-provided
+# information and are not distributed with this repository. Their private local
+# folder must be supplied through MOMI_INPUT_DIR.
+private_input_directory <- function() {
+  input_directory <- Sys.getenv("MOMI_INPUT_DIR", unset = "")
 
-  if (nzchar(external_data_directory)) {
-    normalizePath(external_data_directory, mustWork = TRUE)
-  } else {
-    file.path(project_directory, "data", "processed")
-  }
-}
-
-# Accept the public file names documented in data/README.md and the original
-# local file names used while developing the manuscript analysis.
-locate_input_file <- function(directory, accepted_file_names) {
-  candidate_paths <- file.path(directory, accepted_file_names)
-  files_that_exist <- candidate_paths[file.exists(candidate_paths)]
-
-  if (!length(files_that_exist)) {
+  if (!nzchar(input_directory)) {
     stop(
-      "Missing input in ", directory, ". Expected one of: ",
-      paste(accepted_file_names, collapse = ", "),
+      "Set MOMI_INPUT_DIR to the private folder containing the local analysis objects.",
       call. = FALSE
     )
   }
 
-  files_that_exist[[1]]
+  normalizePath(input_directory, mustWork = TRUE)
 }
 
-# Read the sample-level proteomics data and the SOMAmer annotation table, then
-# check all columns needed by the five figure workflows.
-load_analysis_inputs <- function(project_directory = getwd()) {
-  input_directory <- data_directory(project_directory)
+# Read the local sample-level proteomics object and SOMAmer annotation object,
+# then check every column needed by the five figure workflows.
+load_analysis_inputs <- function() {
+  input_directory <- private_input_directory()
+  sample_data_file <- file.path(input_directory, "comb_v0_vax.rds")
+  annotation_file <- file.path(
+    input_directory,
+    "MOMI_proteomics_Somalogic_AptInfo.rds"
+  )
 
-  sample_data_file <- locate_input_file(
-    input_directory,
-    c("comb_v0_vax.rds", "analysis_data.rds")
-  )
-  annotation_file <- locate_input_file(
-    input_directory,
-    c(
-      "aptamer_annotations.rds",
-      "MOMI_proteomics_Somalogic_AptInfo.rds",
-      "somalogic_protein_info.rds"
+  missing_files <- c(sample_data_file, annotation_file)[
+    !file.exists(c(sample_data_file, annotation_file))
+  ]
+  if (length(missing_files)) {
+    stop(
+      "Missing private analysis object(s): ",
+      paste(basename(missing_files), collapse = ", "),
+      call. = FALSE
     )
-  )
+  }
 
   samples <- readRDS(sample_data_file)
   annotations <- readRDS(annotation_file)
@@ -213,7 +203,7 @@ prepare_figure <- function(figure_number, project_directory = getwd()) {
 
   list(
     settings = settings,
-    study_data = load_analysis_inputs(project_directory),
+    study_data = load_analysis_inputs(),
     output = figure_output_folders(figure_number, project_directory)
   )
 }

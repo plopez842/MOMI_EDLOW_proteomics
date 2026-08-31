@@ -4,9 +4,9 @@
 .Rproj.user/
 *.Rproj
 
-# Participant-level and intermediate data are never committed.
-data/processed/*
-!data/processed/.gitkeep
+# Private analysis objects are never committed.
+*.rds
+*.RDS
 results/cache/*
 !results/cache/.gitkeep
 
