@@ -8,17 +8,16 @@
 #   it does not reproduce the publication results.
 #
 # Run from the repository folder with:
-#   MOMI_DATA_DIR=/path/to/data MOMI_N_PERM=1 Rscript tests/smoke_test.R
+#   Rscript tests/smoke_test.R
 
-project_directory <- getwd()
-if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
+if (!file.exists("DESCRIPTION")) {
   stop("Run this script from the MOMI_EDLOW_proteomics repository folder.", call. = FALSE)
 }
 
-source(file.path(project_directory, "helpful_functions", "data_and_setup.R"))
-source_analysis_functions(project_directory)
+source("helpful_functions/project_setup.R")
+source_analysis_functions()
 
-study_data <- load_analysis_inputs(project_directory)
+study_data <- load_analysis_inputs()
 stopifnot(nrow(study_data$samples) > 0L, length(study_data$proteins) >= 12L)
 
 # Use only 12 proteins so this check finishes quickly.

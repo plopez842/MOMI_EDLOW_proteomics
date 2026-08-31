@@ -9,8 +9,7 @@
 # Run from the repository folder with:
 #   Rscript scripts/run_all.R
 
-project_directory <- getwd()
-if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
+if (!file.exists("DESCRIPTION")) {
   stop("Run this script from the MOMI_EDLOW_proteomics repository folder.", call. = FALSE)
 }
 
@@ -24,7 +23,7 @@ figure_scripts <- c(
 
 for (figure_script in figure_scripts) {
   message("Running ", figure_script, " ...")
-  exit_status <- system2("Rscript", file.path(project_directory, figure_script))
+  exit_status <- system2("Rscript", figure_script)
 
   if (exit_status != 0L) {
     stop(figure_script, " failed with exit status ", exit_status, call. = FALSE)

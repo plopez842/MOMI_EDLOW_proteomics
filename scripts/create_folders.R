@@ -9,12 +9,11 @@
 # Run from the repository folder with:
 #   Rscript scripts/create_folders.R
 
-project_directory <- getwd()
-if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
+if (!file.exists("DESCRIPTION")) {
   stop("Run this script from the MOMI_EDLOW_proteomics repository folder.", call. = FALSE)
 }
 
-source(file.path(project_directory, "helpful_functions", "data_and_setup.R"))
-create_output_directories(project_directory)
+source("helpful_functions/project_setup.R")
+create_output_directories()
 
-message("Output folders are ready under: ", file.path(project_directory, "results"))
+message("Output folders are ready under: results/")

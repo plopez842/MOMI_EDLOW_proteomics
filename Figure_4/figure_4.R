@@ -11,11 +11,6 @@
 #   B  Example protein trajectories
 #   C  KEGG pathway enrichment across gestational weeks
 #
-# Input:
-#   data/processed/comb_v0_vax.rds
-#   data/processed/aptamer_annotations.rds
-#   Figure_4/pathways_shown.csv
-#
 # Output:
 #   results/figures/figure_04/
 #   results/tables/figure_04/
@@ -24,28 +19,20 @@
 #   Rscript Figure_4/figure_4.R
 
 
-# 1. Load functions, settings, and data ----
+# 1. Project setup ----
 
-project_directory <- getwd()
-if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
-  stop("Run this script from the MOMI_EDLOW_proteomics repository folder.", call. = FALSE)
-}
+source("helpful_functions/project_setup.R")
+figure_setup <- prepare_figure(4)
 
-source(file.path(project_directory, "helpful_functions", "data_and_setup.R"))
-source_analysis_functions(project_directory)
-create_output_directories(project_directory)
-
-settings <- analysis_parameters()
-set.seed(settings$seed)
-
-study_data <- load_analysis_inputs(project_directory)
-output <- figure_output_folders(4, project_directory)
+settings <- figure_setup$settings
+study_data <- figure_setup$study_data
+output <- figure_setup$output
 
 
 # 2. Dose 2 versus baseline GAM permutation analysis ----
 
-dose_2_cache <- file.path(
-  output$cache,
+dose_2_cache <- result_cache_directory(
+  output,
   paste0("nperm_", settings$n_perm, "_k", settings$gam_k)
 )
 
@@ -65,9 +52,10 @@ dose_2_statistics$gene <- gene_symbols(
   dose_2_statistics$protein,
   study_data$annotations
 )
-save_table(
+save_results_table(
   dose_2_statistics,
-  file.path(output$tables, "dose2_vs_baseline_gam_permutation.csv")
+  output,
+  "dose2_vs_baseline_gam_permutation"
 )
 
 
@@ -96,9 +84,10 @@ figure_4a <- plot_log2fc_heatmap(
   proteins_shown,
   "Differentially expressed proteins after Dose 2"
 )
-save_plot(
+save_results_plot(
   figure_4a,
-  file.path(output$plots, "figure_04A_dose2_log2fc_heatmap.pdf"),
+  output,
+  "figure_04A_dose2_log2fc_heatmap",
   8,
   6
 )
@@ -118,9 +107,10 @@ figure_4b <- plot_vaccine_proteins(
   study_data$annotations,
   dose = "V2"
 )
-save_plot(
+save_results_plot(
   figure_4b,
-  file.path(output$plots, "figure_04B_dose2_protein_trajectories.pdf"),
+  output,
+  "figure_04B_dose2_protein_trajectories",
   11,
   5
 )
@@ -140,32 +130,32 @@ dose_2_gsea <- run_gsea_matrix(
   representative_aptamers,
   settings$seed
 )
-save_table(
+save_results_table(
   dose_2_gsea,
-  file.path(output$tables, "dose2_kegg_gsea_all_weeks.csv")
+  output,
+  "dose2_kegg_gsea_all_weeks"
 )
 
-pathways_shown <- readr::read_csv(
-  file.path(project_directory, "Figure_4", "pathways_shown.csv"),
-  show_col_types = FALSE
-)
+pathways_shown <- read_pathways_shown(4)
 figure_pathway_results <- filter_pathway_panel(
   dose_2_gsea,
   pathways_shown,
   fdr = 0.25
 )
-save_table(
+save_results_table(
   figure_pathway_results,
-  file.path(output$tables, "dose2_kegg_gsea_main_figure_panel.csv")
+  output,
+  "dose2_kegg_gsea_main_figure_panel"
 )
 
 figure_4c <- plot_gsea_bubbles(
   figure_pathway_results,
   "Dose 2 versus baseline KEGG GSEA"
 )
-save_plot(
+save_results_plot(
   figure_4c,
-  file.path(output$plots, "figure_04C_dose2_kegg_gsea.pdf"),
+  output,
+  "figure_04C_dose2_kegg_gsea",
   11,
   10
 )

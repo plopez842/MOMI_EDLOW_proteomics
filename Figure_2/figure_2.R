@@ -10,11 +10,6 @@
 #   A-C  Trimester differential-abundance volcano plots
 #   D    KEGG GSEA heatmap
 #
-# Input:
-#   data/processed/comb_v0_vax.rds
-#   data/processed/aptamer_annotations.rds
-#   Figure_2/pathways_shown.csv
-#
 # Output:
 #   results/figures/figure_02/
 #   results/tables/figure_02/
@@ -23,22 +18,14 @@
 #   Rscript Figure_2/figure_2.R
 
 
-# 1. Load functions, settings, and data ----
+# 1. Project setup ----
 
-project_directory <- getwd()
-if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
-  stop("Run this script from the MOMI_EDLOW_proteomics repository folder.", call. = FALSE)
-}
+source("helpful_functions/project_setup.R")
+figure_setup <- prepare_figure(2)
 
-source(file.path(project_directory, "helpful_functions", "data_and_setup.R"))
-source_analysis_functions(project_directory)
-create_output_directories(project_directory)
-
-settings <- analysis_parameters()
-set.seed(settings$seed)
-
-study_data <- load_analysis_inputs(project_directory)
-output <- figure_output_folders(2, project_directory)
+settings <- figure_setup$settings
+study_data <- figure_setup$study_data
+output <- figure_setup$output
 
 
 # 2. Differential abundance between trimesters (Figure 2A-C) ----
@@ -67,9 +54,10 @@ volcano_plots <- lapply(names(trimester_results$tables), function(comparison) {
     study_data$annotations
   )
 
-  save_table(
+  save_results_table(
     comparison_table,
-    file.path(output$tables, paste0("limma_", comparison, ".csv"))
+    output,
+    paste0("limma_", comparison)
   )
 
   volcano_plot(
@@ -81,9 +69,10 @@ volcano_plots <- lapply(names(trimester_results$tables), function(comparison) {
 
 names(volcano_plots) <- names(trimester_results$tables)
 figure_2abc <- patchwork::wrap_plots(volcano_plots, nrow = 1)
-save_plot(
+save_results_plot(
   figure_2abc,
-  file.path(output$plots, "figure_02A-C_trimester_volcanoes.pdf"),
+  output,
+  "figure_02A-C_trimester_volcanoes",
   12,
   4
 )
@@ -123,35 +112,35 @@ all_gsea_results <- dplyr::bind_rows(
   between_trimester_gsea,
   within_trimester_gsea
 )
-save_table(
+save_results_table(
   all_gsea_results,
-  file.path(output$tables, "kegg_gsea_all_comparisons.csv")
+  output,
+  "kegg_gsea_all_comparisons"
 )
 
 
 # 4. Select manuscript pathways and make Figure 2D ----
 
-pathways_shown <- readr::read_csv(
-  file.path(project_directory, "Figure_2", "pathways_shown.csv"),
-  show_col_types = FALSE
-)
+pathways_shown <- read_pathways_shown(2)
 figure_pathway_results <- filter_pathway_panel(
   all_gsea_results,
   pathways_shown,
   fdr = 0.25
 )
-save_table(
+save_results_table(
   figure_pathway_results,
-  file.path(output$tables, "kegg_gsea_main_figure_panel.csv")
+  output,
+  "kegg_gsea_main_figure_panel"
 )
 
 figure_2d <- plot_pathway_heatmap(
   figure_pathway_results,
   "Pathway activity across and within pregnancy trimesters"
 )
-save_plot(
+save_results_plot(
   figure_2d,
-  file.path(output$plots, "figure_02D_kegg_gsea_heatmap.pdf"),
+  output,
+  "figure_02D_kegg_gsea_heatmap",
   13,
   10
 )

@@ -10,7 +10,7 @@ The study includes 1,497 SOMAmer analytes measured in 466 plasma samples from 27
 
 ## Where is the code?
 
-Each manuscript figure has one top-level folder. Open the folder, then run the R script inside it. If a figure uses a selected list of pathways, that list is in the same folder as `pathways_shown.csv`.
+Each manuscript figure has one top-level folder. Open the folder, then run the R script inside it.
 
 | Figure | Script | Analysis |
 |---|---|---|
@@ -22,34 +22,22 @@ Each manuscript figure has one top-level folder. Open the folder, then run the R
 
 ```text
 MOMI_EDLOW_proteomics/
-├── Figure_1/              Figure 1 script and pathways shown
-├── Figure_2/              Figure 2 script and pathways shown
-├── Figure_3/              Figure 3 script and pathways shown
-├── Figure_4/              Figure 4 script and pathways shown
-├── Figure_5/              Figure 5 script and pathways shown
+├── Figure_1/              Figure 1 script
+├── Figure_2/              Figure 2 script
+├── Figure_3/              Figure 3 script
+├── Figure_4/              Figure 4 script
+├── Figure_5/              Figure 5 script
 ├── helpful_functions/     Clearly named shared analysis and plotting functions
+├── pathway_lists/         Curated pathways shown in each manuscript figure
 ├── data/                  Data instructions; participant data are not in Git
 ├── results/               Generated plots, tables, and saved intermediate results
 ├── scripts/               Setup, data check, and run-all scripts
 └── tests/                 Small end-to-end test
 ```
 
-## Data
+## Analysis inputs
 
-Study data are available from ImmPort under accession **SDY2913**. The participant-level data are not included in Git.
-
-The analysis needs these two R objects:
-
-```text
-data/processed/comb_v0_vax.rds
-data/processed/aptamer_annotations.rds
-```
-
-See [`data/README.md`](data/README.md) for the required columns. The files may also live elsewhere:
-
-```bash
-export MOMI_DATA_DIR=/path/to/the/folder/containing/the/rds/files
-```
+Participant-level files are not included in Git. Access, placement, and required columns are documented in [`data/README.md`](data/README.md).
 
 ## Run the analysis
 
@@ -87,9 +75,9 @@ The output folders are created automatically. `Rscript scripts/create_folders.R`
 
 ## How the scripts are organized
 
-Every figure script begins with its purpose, manuscript panels, required inputs, outputs, and exact run command. Numbered section headings then follow the analysis in order. Shared functions are grouped by scientific purpose:
+Every figure script begins with its purpose, manuscript panels, outputs, and exact run command. Numbered section headings then follow the scientific analysis in order. Input locations, pathway-table locations, and file extensions appear only in `project_setup.R`, not in the figure scripts.
 
-- `data_and_setup.R`: read data, check columns, define settings, and create folders
+- `project_setup.R`: the single location for inputs, pathway tables, settings, and output folders
 - `statistical_models.R`: LASSO, PLSDA, GAMs, permutations, SOM, and acute models
 - `pathway_analysis.R`: KEGG GSEA and Reactome enrichment
 - `plotting_functions.R`: manuscript plots and colors

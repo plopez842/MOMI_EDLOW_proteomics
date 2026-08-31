@@ -1,7 +1,9 @@
-# DATA LOADING AND PROJECT SETUP ----
+# PROJECT SETUP ----
 #
-# This file contains the shared setup functions used by every figure script.
-# It does four things:
+# This is the one central file that knows where inputs and pathway tables live.
+# Figure scripts do not contain file names or file-location plumbing.
+#
+# This file:
 #   1. Loads the other helper files.
 #   2. Reads and checks the two analysis input files.
 #   3. Stores the analysis settings (seed, permutations, cores, and GAM k).
@@ -189,6 +191,86 @@ figure_output_folders <- function(figure_number, project_directory = getwd()) {
     plots = file.path(project_directory, "results", "figures", figure_name),
     tables = file.path(project_directory, "results", "tables", figure_name),
     cache = file.path(project_directory, "results", "cache", figure_name)
+  )
+}
+
+# Perform all common setup for one figure. Figure scripts receive readable
+# objects named settings, study_data, and output without knowing file locations.
+prepare_figure <- function(figure_number, project_directory = getwd()) {
+  if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
+    stop(
+      "Run this script from the MOMI_EDLOW_proteomics repository folder.",
+      call. = FALSE
+    )
+  }
+
+  source_analysis_functions(project_directory)
+  create_output_directories(project_directory)
+
+  settings <- analysis_parameters()
+  set.seed(settings$seed)
+
+  list(
+    settings = settings,
+    study_data = load_analysis_inputs(project_directory),
+    output = figure_output_folders(figure_number, project_directory)
+  )
+}
+
+# Read one curated pathway list. Figure scripts do not know its file location.
+read_pathways_shown <- function(figure_number, project_directory = getwd()) {
+  readr::read_csv(
+    file.path(
+      project_directory,
+      "pathway_lists",
+      sprintf("figure_%d.csv", figure_number)
+    ),
+    show_col_types = FALSE
+  )
+}
+
+# Build a plot path without exposing folders or file extensions in figure code.
+result_plot_file <- function(output, file_name) {
+  file.path(output$plots, paste0(file_name, ".pdf"))
+}
+
+# Build a cache path without exposing folders or file extensions in figure code.
+result_cache_file <- function(output, file_name) {
+  file.path(output$cache, paste0(file_name, ".rds"))
+}
+
+# Create and return a named subfolder for per-protein intermediate calculations.
+result_cache_directory <- function(output, directory_name) {
+  cache_directory <- file.path(output$cache, directory_name)
+  dir.create(cache_directory, recursive = TRUE, showWarnings = FALSE)
+  cache_directory
+}
+
+# Reuse a completed calculation when available; otherwise calculate and save it.
+use_cached_result <- function(output, file_name, calculate) {
+  cache_file <- result_cache_file(output, file_name)
+
+  if (file.exists(cache_file)) {
+    return(readRDS(cache_file))
+  }
+
+  result <- calculate()
+  saveRDS(result, cache_file)
+  result
+}
+
+# Save one manuscript result table. Figure scripts provide only a readable name.
+save_results_table <- function(table, output, file_name) {
+  save_table(table, file.path(output$tables, paste0(file_name, ".csv")))
+}
+
+# Save one manuscript plot. Figure scripts provide only a readable name and size.
+save_results_plot <- function(plot, output, file_name, width, height) {
+  save_plot(
+    plot,
+    result_plot_file(output, file_name),
+    width = width,
+    height = height
   )
 }
 

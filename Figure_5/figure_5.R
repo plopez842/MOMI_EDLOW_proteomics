@@ -13,11 +13,6 @@
 #   C  Number of positively and negatively enriched pathways by day
 #   D  KEGG pathway enrichment during days 1-7
 #
-# Input:
-#   data/processed/comb_v0_vax.rds
-#   data/processed/aptamer_annotations.rds
-#   Figure_5/pathways_shown.csv
-#
 # Output:
 #   results/figures/figure_05/
 #   results/tables/figure_05/
@@ -26,22 +21,14 @@
 #   Rscript Figure_5/figure_5.R
 
 
-# 1. Load functions, settings, and data ----
+# 1. Project setup ----
 
-project_directory <- getwd()
-if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
-  stop("Run this script from the MOMI_EDLOW_proteomics repository folder.", call. = FALSE)
-}
+source("helpful_functions/project_setup.R")
+figure_setup <- prepare_figure(5)
 
-source(file.path(project_directory, "helpful_functions", "data_and_setup.R"))
-source_analysis_functions(project_directory)
-create_output_directories(project_directory)
-
-settings <- analysis_parameters()
-set.seed(settings$seed)
-
-study_data <- load_analysis_inputs(project_directory)
-output <- figure_output_folders(5, project_directory)
+settings <- figure_setup$settings
+study_data <- figure_setup$study_data
+output <- figure_setup$output
 
 
 # 2. Acute Dose 1 and Dose 2 permutation analyses ----
@@ -54,8 +41,8 @@ acute_dose_1 <- run_acute_analysis(
   k = settings$gam_k,
   cores = settings$cores,
   seed = settings$seed,
-  cache_dir = file.path(
-    output$cache,
+  cache_dir = result_cache_directory(
+    output,
     paste0("V1_nperm_", settings$n_perm)
   )
 )
@@ -68,8 +55,8 @@ acute_dose_2 <- run_acute_analysis(
   k = settings$gam_k,
   cores = settings$cores,
   seed = settings$seed + 500000L,
-  cache_dir = file.path(
-    output$cache,
+  cache_dir = result_cache_directory(
+    output,
     paste0("V2_nperm_", settings$n_perm)
   )
 )
@@ -83,13 +70,15 @@ dose_2_statistics <- transform(
   gene = gene_symbols(acute_dose_2$stats$protein, study_data$annotations)
 )
 
-save_table(
+save_results_table(
   dose_1_statistics,
-  file.path(output$tables, "acute_dose1_lrt_permutation.csv")
+  output,
+  "acute_dose1_lrt_permutation"
 )
-save_table(
+save_results_table(
   dose_2_statistics,
-  file.path(output$tables, "acute_dose2_lrt_permutation.csv")
+  output,
+  "acute_dose2_lrt_permutation"
 )
 
 
@@ -117,15 +106,17 @@ figure_5b <- plot_acute_proteins(
   study_data$annotations
 )
 
-save_plot(
+save_results_plot(
   figure_5a,
-  file.path(output$plots, "figure_05A_acute_dose1_proteins.pdf"),
+  output,
+  "figure_05A_acute_dose1_proteins",
   7,
   7
 )
-save_plot(
+save_results_plot(
   figure_5b,
-  file.path(output$plots, "figure_05B_acute_dose2_proteins.pdf"),
+  output,
+  "figure_05B_acute_dose2_proteins",
   7,
   9
 )
@@ -155,13 +146,15 @@ dose_2_gsea <- run_gsea_matrix(
 dose_1_gsea$dose <- "V1"
 dose_2_gsea$dose <- "V2"
 
-save_table(
+save_results_table(
   dose_1_gsea,
-  file.path(output$tables, "acute_dose1_kegg_gsea.csv")
+  output,
+  "acute_dose1_kegg_gsea"
 )
-save_table(
+save_results_table(
   dose_2_gsea,
-  file.path(output$tables, "acute_dose2_kegg_gsea.csv")
+  output,
+  "acute_dose2_kegg_gsea"
 )
 
 
@@ -178,9 +171,10 @@ figure_5c <- patchwork::wrap_plots(
   nrow = 1,
   guides = "collect"
 )
-save_plot(
+save_results_plot(
   figure_5c,
-  file.path(output$plots, "figure_05C_acute_gsea_counts.pdf"),
+  output,
+  "figure_05C_acute_gsea_counts",
   8,
   3.5
 )
@@ -188,10 +182,7 @@ save_plot(
 
 # 6. Selected acute pathways (Figure 5D) ----
 
-pathways_shown <- readr::read_csv(
-  file.path(project_directory, "Figure_5", "pathways_shown.csv"),
-  show_col_types = FALSE
-)
+pathways_shown <- read_pathways_shown(5)
 dose_1_pathways_shown <- filter_pathway_panel(
   dose_1_gsea,
   pathways_shown,
@@ -203,13 +194,14 @@ dose_2_pathways_shown <- filter_pathway_panel(
   fdr = 0.25
 )
 
-save_table(
+save_results_table(
   dplyr::bind_rows(
     V1 = dose_1_pathways_shown,
     V2 = dose_2_pathways_shown,
     .id = "dose"
   ),
-  file.path(output$tables, "acute_kegg_gsea_main_figure_panel.csv")
+  output,
+  "acute_kegg_gsea_main_figure_panel"
 )
 
 figure_5d <- patchwork::wrap_plots(
@@ -220,9 +212,10 @@ figure_5d <- patchwork::wrap_plots(
   nrow = 1,
   guides = "collect"
 )
-save_plot(
+save_results_plot(
   figure_5d,
-  file.path(output$plots, "figure_05D_acute_kegg_gsea.pdf"),
+  output,
+  "figure_05D_acute_kegg_gsea",
   12,
   9
 )

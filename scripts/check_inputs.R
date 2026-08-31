@@ -9,13 +9,12 @@
 # Run from the repository folder with:
 #   Rscript scripts/check_inputs.R
 
-project_directory <- getwd()
-if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
+if (!file.exists("DESCRIPTION")) {
   stop("Run this script from the MOMI_EDLOW_proteomics repository folder.", call. = FALSE)
 }
 
-source(file.path(project_directory, "helpful_functions", "data_and_setup.R"))
-study_data <- load_analysis_inputs(project_directory)
+source("helpful_functions/project_setup.R")
+study_data <- load_analysis_inputs()
 
 cat("Analysis data:", study_data$data_path, "\n")
 cat("Annotation data:", study_data$annotation_path, "\n")

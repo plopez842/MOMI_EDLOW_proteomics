@@ -123,7 +123,7 @@ run_reactome_ora <- function(protein_clusters, representative_mapping) {
 
 # Prepare pathway results for manuscript plots ----
 
-# Keep the pathways listed beside each figure script in pathways_shown.csv.
+# Keep the curated pathways selected for a manuscript figure.
 filter_pathway_panel <- function(gsea_results, panel, fdr = 0.25) {
   if (!nrow(gsea_results)) return(gsea_results)
   output <- dplyr::inner_join(

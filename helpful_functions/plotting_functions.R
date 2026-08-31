@@ -147,7 +147,7 @@ plot_som_trajectories <- function(som_result, weeks = 8:40) {
     theme_manuscript(base_size = 8)
 }
 
-# Plot the Reactome pathways listed in Figure_1/pathways_shown.csv.
+# Plot the selected Reactome pathways for the manuscript panel.
 plot_reactome_panel <- function(enrichment, panel) {
   data <- dplyr::inner_join(enrichment, panel, by = c("Description" = "pathway", "cluster" = "cluster_order"))
   data <- data[data$p.adjust < 0.25, , drop = FALSE]
