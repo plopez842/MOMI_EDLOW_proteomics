@@ -1,3 +1,19 @@
+# STATISTICAL MODELING FUNCTIONS ----
+#
+# This file contains the models shared by multiple manuscript figures:
+#   - repeated LASSO feature selection and PLSDA
+#   - gestational-age generalized additive models (GAMs)
+#   - label-permutation significance tests
+#   - self-organizing map (SOM) clustering
+#   - acute post-vaccination median-of-medians (MoM) models
+#
+# Figure scripts provide the biological comparisons and call these functions.
+
+
+# Parallel processing helper ----
+
+# Use multiple macOS/Linux processes when MOMI_CORES is greater than one.
+# Windows and single-core runs use ordinary lapply().
 parallel_lapply <- function(x, fun, cores = 1L) {
   if (cores > 1L && .Platform$OS.type != "windows") {
     parallel::mclapply(x, fun, mc.cores = cores, mc.preschedule = FALSE)
@@ -6,6 +22,11 @@ parallel_lapply <- function(x, fun, cores = 1L) {
   }
 }
 
+
+# LASSO feature selection and PLSDA ----
+
+# Repeat cross-validated LASSO and retain proteins selected in at least the
+# requested fraction of trials.
 repeated_lasso_select <- function(x, y, trials = 100L, threshold = 0.8, seed = 1010L) {
   x <- as.matrix(x)
   y <- droplevels(factor(y))
@@ -42,6 +63,8 @@ repeated_lasso_select <- function(x, y, trials = 100L, threshold = 0.8, seed = 1
   list(selected = selected, frequency = sort(frequency, decreasing = TRUE))
 }
 
+# Fit a two-component PLSDA model and return the scores, loadings, and VIPs in
+# plain R objects that are easy to save and plot.
 fit_plsda <- function(x, y, n_components = 2L) {
   x <- as.matrix(x)
   y <- droplevels(factor(y))
@@ -63,10 +86,15 @@ fit_plsda <- function(x, y, n_components = 2L) {
   )
 }
 
+
+# Generalized additive model helpers ----
+
+# Limit spline complexity when only a few distinct time values are available.
 effective_k <- function(x, requested = 8L) {
   max(3L, min(as.integer(requested), length(unique(stats::na.omit(x))) - 1L))
 }
 
+# Fit one REML cubic-regression spline across gestational age in days.
 fit_gam_curve <- function(y, ga_days, k = 8L) {
   keep <- is.finite(y) & is.finite(ga_days)
   model_data <- data.frame(y = as.numeric(y[keep]), ga = as.numeric(ga_days[keep]))
@@ -77,14 +105,22 @@ fit_gam_curve <- function(y, ga_days, k = 8L) {
   mgcv::gam(y ~ s(ga, bs = "cr", k = k_eff), method = "REML", data = model_data)
 }
 
+# Predict a fitted gestational GAM at specific gestational ages.
 predict_gam_curve <- function(model, ga_days) {
   as.numeric(stats::predict(model, newdata = data.frame(ga = ga_days), type = "response"))
 }
 
+# Numerically integrate a curve using the trapezoid rule.
 trapezoid_sum <- function(x, y) {
   sum(diff(x) * (head(y, -1L) + tail(y, -1L)) / 2)
 }
 
+
+# Vaccine response across gestation ----
+
+# For one protein, fit separate baseline and vaccinated GAMs. The test statistic
+# is the integrated absolute distance between curves. Label permutation creates
+# the empirical null distribution.
 fit_one_vaccine_protein <- function(y, ga_days, group, n_perm = 1000L, k = 8L, seed = 1010L) {
   keep <- is.finite(y) & is.finite(ga_days) & !is.na(group)
   y <- as.numeric(y[keep])
@@ -131,6 +167,8 @@ fit_one_vaccine_protein <- function(y, ga_days, group, n_perm = 1000L, k = 8L, s
   )
 }
 
+# Apply the vaccine GAM permutation test to every protein for Dose 1 or Dose 2.
+# Optional per-protein cache files allow long analyses to resume.
 run_vaccine_gam_analysis <- function(samples, proteins, dose = c("V1", "V2"), n_perm = 1000L,
                                      k = 8L, cores = 1L, seed = 1010L, cache_dir = NULL) {
   dose <- match.arg(dose)
@@ -178,6 +216,11 @@ run_vaccine_gam_analysis <- function(samples, proteins, dose = c("V1", "V2"), n_
   )
 }
 
+
+# Baseline gestational trajectories ----
+
+# For one baseline protein, test whether its GAM explains more variation than
+# expected after permuting protein abundance across gestational ages.
 fit_one_baseline_gam <- function(y, ga_days, prediction_days, n_perm = 1000L, k = 8L, seed = 1010L) {
   model <- fit_gam_curve(y, ga_days, k)
   observed <- summary(model)$dev.expl
@@ -197,6 +240,7 @@ fit_one_baseline_gam <- function(y, ga_days, prediction_days, n_perm = 1000L, k 
   )
 }
 
+# Run the baseline gestational GAM permutation test for every protein.
 run_baseline_gam_analysis <- function(samples, proteins, n_perm = 1000L, k = 8L,
                                       cores = 1L, seed = 1010L, cache_dir = NULL) {
   baseline <- samples[samples$Timepoint_v1 == "V0", , drop = FALSE]
@@ -229,11 +273,14 @@ run_baseline_gam_analysis <- function(samples, proteins, n_perm = 1000L, k = 8L,
   list(baseline = baseline, stats = stats, fitted = fitted)
 }
 
+
+# Self-organizing map ----
+
+# Cluster standardized fitted gestational trajectories. The publication uses an
+# 11 x 11 SOM; smaller maps are used automatically for reduced tests.
 train_self_organizing_map <- function(fitted_matrix, clusters = 11L, seed = 1010L) {
   set.seed(seed)
   x <- t(scale(t(as.matrix(fitted_matrix))))
-  # The publication analysis uses an 11 x 11 map for 625 proteins. A smaller
-  # map is used only when a reduced protein set is supplied for testing.
   grid_side <- min(11L, max(2L, floor(sqrt(nrow(x)))))
   grid <- kohonen::somgrid(grid_side, grid_side, topo = "hexagonal")
   radius_start <- 2 * grid_side / 3
@@ -263,6 +310,11 @@ train_self_organizing_map <- function(fitted_matrix, clusters = 11L, seed = 1010
   )
 }
 
+
+# Acute response during days 1-7 ----
+
+# For one protein, subtract the gestational-age-specific baseline expectation
+# from each acute sample, then test whether MoM varies across days 1-7.
 fit_acute_mom <- function(baseline_y, baseline_ga, acute_y, acute_ga, acute_day,
                           n_perm = 1000L, k = 8L, seed = 1010L) {
   baseline_model <- fit_gam_curve(baseline_y, baseline_ga, k)
@@ -297,6 +349,7 @@ fit_acute_mom <- function(baseline_y, baseline_ga, acute_y, acute_ga, acute_day,
   )
 }
 
+# Apply the acute MoM likelihood-ratio permutation test to every protein.
 run_acute_analysis <- function(samples, proteins, dose = c("V1", "V2"), n_perm = 1000L,
                                k = 8L, cores = 1L, seed = 1010L, cache_dir = NULL) {
   dose <- match.arg(dose)

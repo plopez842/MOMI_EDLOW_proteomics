@@ -1,13 +1,34 @@
 #!/usr/bin/env Rscript
 
-args <- commandArgs(trailingOnly = FALSE)
-script <- sub("^--file=", "", args[grep("^--file=", args)][1])
-root <- normalizePath(file.path(dirname(script), ".."), mustWork = TRUE)
+# RUN ALL FIVE MANUSCRIPT FIGURES ----
+#
+# Purpose:
+#   Run Figure 1 through Figure 5 in manuscript order. Each figure saves its
+#   plots and result tables before the next figure begins.
+#
+# Run from the repository folder with:
+#   Rscript scripts/run_all.R
 
-for (number in 1:5) {
-  figure_script <- file.path(root, sprintf("Figure_%d", number), sprintf("figure_%d.R", number))
-  message("Running ", basename(dirname(figure_script)), "...")
-  status <- system2("Rscript", figure_script)
-  if (status != 0L) stop("Figure ", number, " failed with status ", status, call. = FALSE)
+project_directory <- getwd()
+if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
+  stop("Run this script from the MOMI_EDLOW_proteomics repository folder.", call. = FALSE)
 }
-message("All main-figure workflows completed.")
+
+figure_scripts <- c(
+  "Figure_1/figure_1.R",
+  "Figure_2/figure_2.R",
+  "Figure_3/figure_3.R",
+  "Figure_4/figure_4.R",
+  "Figure_5/figure_5.R"
+)
+
+for (figure_script in figure_scripts) {
+  message("Running ", figure_script, " ...")
+  exit_status <- system2("Rscript", file.path(project_directory, figure_script))
+
+  if (exit_status != 0L) {
+    stop(figure_script, " failed with exit status ", exit_status, call. = FALSE)
+  }
+}
+
+message("All five manuscript figure workflows are complete.")

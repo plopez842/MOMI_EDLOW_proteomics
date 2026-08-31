@@ -27,7 +27,7 @@ MOMI_EDLOW_proteomics/
 ├── Figure_3/              Figure 3 script and pathways shown
 ├── Figure_4/              Figure 4 script and pathways shown
 ├── Figure_5/              Figure 5 script and pathways shown
-├── R/                     Shared analysis and plotting functions
+├── helpful_functions/     Clearly named shared analysis and plotting functions
 ├── data/                  Data instructions; participant data are not in Git
 ├── results/               Generated plots, tables, and saved intermediate results
 ├── scripts/               Setup, data check, and run-all scripts
@@ -84,6 +84,16 @@ MOMI_LASSO_TRIALS=1 MOMI_N_PERM=1 MOMI_CORES=1 Rscript tests/smoke_test.R
 - Saved intermediate calculations: `results/cache/`
 
 The output folders are created automatically. `Rscript scripts/create_folders.R` can also create them before an analysis starts.
+
+## How the scripts are organized
+
+Every figure script begins with its purpose, manuscript panels, required inputs, outputs, and exact run command. Numbered section headings then follow the analysis in order. Shared functions are grouped by scientific purpose:
+
+- `data_and_setup.R`: read data, check columns, define settings, and create folders
+- `statistical_models.R`: LASSO, PLSDA, GAMs, permutations, SOM, and acute models
+- `pathway_analysis.R`: KEGG GSEA and Reactome enrichment
+- `plotting_functions.R`: manuscript plots and colors
+- `vaccine_analysis.R`: trimester, vaccine, and acute comparison helpers
 
 ## Citation
 

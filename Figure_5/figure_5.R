@@ -1,90 +1,230 @@
 #!/usr/bin/env Rscript
 
-args <- commandArgs(trailingOnly = FALSE)
-script <- sub("^--file=", "", args[grep("^--file=", args)][1])
-root <- normalizePath(file.path(dirname(script), ".."), mustWork = TRUE)
-source(file.path(root, "R", "io.R"))
-source_project_functions(root)
-create_output_directories(root)
+# FIGURE 5: ACUTE RESPONSE DURING DAYS 1-7 AFTER VACCINATION ----
+#
+# Purpose:
+#   Measure acute protein and pathway changes during the first 7 days after
+#   Dose 1 and Dose 2. Each observed protein value is compared with the value
+#   expected at the same gestational age from the baseline GAM.
+#
+# Manuscript panels:
+#   A  Acute example proteins after Dose 1
+#   B  Acute example proteins after Dose 2
+#   C  Number of positively and negatively enriched pathways by day
+#   D  KEGG pathway enrichment during days 1-7
+#
+# Input:
+#   data/processed/comb_v0_vax.rds
+#   data/processed/aptamer_annotations.rds
+#   Figure_5/pathways_shown.csv
+#
+# Output:
+#   results/figures/figure_05/
+#   results/tables/figure_05/
+#
+# Run from the repository folder with:
+#   Rscript Figure_5/figure_5.R
 
-parameters <- analysis_parameters()
-set.seed(parameters$seed)
-inputs <- load_analysis_inputs(root)
-paths <- figure_paths(5, root)
 
-v1 <- run_acute_analysis(
-  inputs$samples,
-  inputs$proteins,
+# 1. Load functions, settings, and data ----
+
+project_directory <- getwd()
+if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
+  stop("Run this script from the MOMI_EDLOW_proteomics repository folder.", call. = FALSE)
+}
+
+source(file.path(project_directory, "helpful_functions", "data_and_setup.R"))
+source_analysis_functions(project_directory)
+create_output_directories(project_directory)
+
+settings <- analysis_parameters()
+set.seed(settings$seed)
+
+study_data <- load_analysis_inputs(project_directory)
+output <- figure_output_folders(5, project_directory)
+
+
+# 2. Acute Dose 1 and Dose 2 permutation analyses ----
+
+acute_dose_1 <- run_acute_analysis(
+  study_data$samples,
+  study_data$proteins,
   dose = "V1",
-  n_perm = parameters$n_perm,
-  k = parameters$gam_k,
-  cores = parameters$cores,
-  seed = parameters$seed,
-  cache_dir = file.path(paths$cache, paste0("V1_nperm_", parameters$n_perm))
+  n_perm = settings$n_perm,
+  k = settings$gam_k,
+  cores = settings$cores,
+  seed = settings$seed,
+  cache_dir = file.path(
+    output$cache,
+    paste0("V1_nperm_", settings$n_perm)
+  )
 )
-v2 <- run_acute_analysis(
-  inputs$samples,
-  inputs$proteins,
+
+acute_dose_2 <- run_acute_analysis(
+  study_data$samples,
+  study_data$proteins,
   dose = "V2",
-  n_perm = parameters$n_perm,
-  k = parameters$gam_k,
-  cores = parameters$cores,
-  seed = parameters$seed + 500000L,
-  cache_dir = file.path(paths$cache, paste0("V2_nperm_", parameters$n_perm))
+  n_perm = settings$n_perm,
+  k = settings$gam_k,
+  cores = settings$cores,
+  seed = settings$seed + 500000L,
+  cache_dir = file.path(
+    output$cache,
+    paste0("V2_nperm_", settings$n_perm)
+  )
 )
 
-v1_stats <- transform(v1$stats, gene = gene_symbols(v1$stats$protein, inputs$annotations))
-v2_stats <- transform(v2$stats, gene = gene_symbols(v2$stats$protein, inputs$annotations))
-save_table(v1_stats, file.path(paths$tables, "acute_dose1_lrt_permutation.csv"))
-save_table(v2_stats, file.path(paths$tables, "acute_dose2_lrt_permutation.csv"))
+dose_1_statistics <- transform(
+  acute_dose_1$stats,
+  gene = gene_symbols(acute_dose_1$stats$protein, study_data$annotations)
+)
+dose_2_statistics <- transform(
+  acute_dose_2$stats,
+  gene = gene_symbols(acute_dose_2$stats$protein, study_data$annotations)
+)
 
-v1_panel_proteins <- proteins_for_genes(
+save_table(
+  dose_1_statistics,
+  file.path(output$tables, "acute_dose1_lrt_permutation.csv")
+)
+save_table(
+  dose_2_statistics,
+  file.path(output$tables, "acute_dose2_lrt_permutation.csv")
+)
+
+
+# 3. Example acute protein trajectories (Figure 5A-B) ----
+
+dose_1_example_proteins <- proteins_for_genes(
   c("VWF", "NOG", "NAAA", "TIMP3", "MRC1", "CXCL12"),
-  inputs$annotations,
-  names(v1$protein_results)
+  study_data$annotations,
+  names(acute_dose_1$protein_results)
 )
-v2_panel_proteins <- proteins_for_genes(
+dose_2_example_proteins <- proteins_for_genes(
   c("TFF3", "C9", "TNFRSF1B", "IL1RN", "TLR5", "AGT", "CXCL10", "POR"),
-  inputs$annotations,
-  names(v2$protein_results)
+  study_data$annotations,
+  names(acute_dose_2$protein_results)
 )
 
-panel_a <- plot_acute_proteins(v1, v1_panel_proteins, inputs$annotations)
-panel_b <- plot_acute_proteins(v2, v2_panel_proteins, inputs$annotations)
-save_plot(panel_a, file.path(paths$plots, "figure_05A_acute_dose1_proteins.pdf"), 7, 7)
-save_plot(panel_b, file.path(paths$plots, "figure_05B_acute_dose2_proteins.pdf"), 7, 9)
-
-representatives <- choose_representative_aptamers(inputs$samples, inputs$proteins, inputs$annotations)
-v1_daily <- daily_acute_mom_matrix(v1)
-v2_daily <- daily_acute_mom_matrix(v2)
-v1_gsea <- run_gsea_matrix(v1_daily, representatives, parameters$seed)
-v2_gsea <- run_gsea_matrix(v2_daily, representatives, parameters$seed + 1000L)
-v1_gsea$dose <- "V1"
-v2_gsea$dose <- "V2"
-save_table(v1_gsea, file.path(paths$tables, "acute_dose1_kegg_gsea.csv"))
-save_table(v2_gsea, file.path(paths$tables, "acute_dose2_kegg_gsea.csv"))
-
-v1_counts <- summarize_gsea_directions(v1_gsea, 0.25)
-v2_counts <- summarize_gsea_directions(v2_gsea, 0.25)
-panel_c <- patchwork::wrap_plots(
-  list(plot_gsea_counts(v1_counts, "V1"), plot_gsea_counts(v2_counts, "V2")),
-  nrow = 1,
-  guides = "collect"
+figure_5a <- plot_acute_proteins(
+  acute_dose_1,
+  dose_1_example_proteins,
+  study_data$annotations
 )
-save_plot(panel_c, file.path(paths$plots, "figure_05C_acute_gsea_counts.pdf"), 8, 3.5)
+figure_5b <- plot_acute_proteins(
+  acute_dose_2,
+  dose_2_example_proteins,
+  study_data$annotations
+)
 
-pathway_panel <- readr::read_csv(file.path(root, "Figure_5", "pathways_shown.csv"), show_col_types = FALSE)
-v1_panel <- filter_pathway_panel(v1_gsea, pathway_panel, fdr = 0.25)
-v2_panel <- filter_pathway_panel(v2_gsea, pathway_panel, fdr = 0.25)
-save_table(dplyr::bind_rows(V1 = v1_panel, V2 = v2_panel, .id = "dose"), file.path(paths$tables, "acute_kegg_gsea_main_figure_panel.csv"))
-panel_d <- patchwork::wrap_plots(
+save_plot(
+  figure_5a,
+  file.path(output$plots, "figure_05A_acute_dose1_proteins.pdf"),
+  7,
+  7
+)
+save_plot(
+  figure_5b,
+  file.path(output$plots, "figure_05B_acute_dose2_proteins.pdf"),
+  7,
+  9
+)
+
+
+# 4. Daily KEGG pathway enrichment ----
+
+representative_aptamers <- choose_representative_aptamers(
+  study_data$samples,
+  study_data$proteins,
+  study_data$annotations
+)
+
+dose_1_daily_mom <- daily_acute_mom_matrix(acute_dose_1)
+dose_2_daily_mom <- daily_acute_mom_matrix(acute_dose_2)
+
+dose_1_gsea <- run_gsea_matrix(
+  dose_1_daily_mom,
+  representative_aptamers,
+  settings$seed
+)
+dose_2_gsea <- run_gsea_matrix(
+  dose_2_daily_mom,
+  representative_aptamers,
+  settings$seed + 1000L
+)
+dose_1_gsea$dose <- "V1"
+dose_2_gsea$dose <- "V2"
+
+save_table(
+  dose_1_gsea,
+  file.path(output$tables, "acute_dose1_kegg_gsea.csv")
+)
+save_table(
+  dose_2_gsea,
+  file.path(output$tables, "acute_dose2_kegg_gsea.csv")
+)
+
+
+# 5. Number of enriched pathways by day (Figure 5C) ----
+
+dose_1_pathway_counts <- summarize_gsea_directions(dose_1_gsea, fdr = 0.25)
+dose_2_pathway_counts <- summarize_gsea_directions(dose_2_gsea, fdr = 0.25)
+
+figure_5c <- patchwork::wrap_plots(
   list(
-    plot_gsea_bubbles(v1_panel, "V1 acute KEGG GSEA"),
-    plot_gsea_bubbles(v2_panel, "V2 acute KEGG GSEA")
+    plot_gsea_counts(dose_1_pathway_counts, "V1"),
+    plot_gsea_counts(dose_2_pathway_counts, "V2")
   ),
   nrow = 1,
   guides = "collect"
 )
-save_plot(panel_d, file.path(paths$plots, "figure_05D_acute_kegg_gsea.pdf"), 12, 9)
+save_plot(
+  figure_5c,
+  file.path(output$plots, "figure_05C_acute_gsea_counts.pdf"),
+  8,
+  3.5
+)
 
-message("Figure 5 panels written to: ", paths$plots)
+
+# 6. Selected acute pathways (Figure 5D) ----
+
+pathways_shown <- readr::read_csv(
+  file.path(project_directory, "Figure_5", "pathways_shown.csv"),
+  show_col_types = FALSE
+)
+dose_1_pathways_shown <- filter_pathway_panel(
+  dose_1_gsea,
+  pathways_shown,
+  fdr = 0.25
+)
+dose_2_pathways_shown <- filter_pathway_panel(
+  dose_2_gsea,
+  pathways_shown,
+  fdr = 0.25
+)
+
+save_table(
+  dplyr::bind_rows(
+    V1 = dose_1_pathways_shown,
+    V2 = dose_2_pathways_shown,
+    .id = "dose"
+  ),
+  file.path(output$tables, "acute_kegg_gsea_main_figure_panel.csv")
+)
+
+figure_5d <- patchwork::wrap_plots(
+  list(
+    plot_gsea_bubbles(dose_1_pathways_shown, "V1 acute KEGG GSEA"),
+    plot_gsea_bubbles(dose_2_pathways_shown, "V2 acute KEGG GSEA")
+  ),
+  nrow = 1,
+  guides = "collect"
+)
+save_plot(
+  figure_5d,
+  file.path(output$plots, "figure_05D_acute_kegg_gsea.pdf"),
+  12,
+  9
+)
+
+message("Figure 5 is complete. Files were written to: ", output$plots)

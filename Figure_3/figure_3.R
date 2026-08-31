@@ -1,59 +1,173 @@
 #!/usr/bin/env Rscript
 
-args <- commandArgs(trailingOnly = FALSE)
-script <- sub("^--file=", "", args[grep("^--file=", args)][1])
-root <- normalizePath(file.path(dirname(script), ".."), mustWork = TRUE)
-source(file.path(root, "R", "io.R"))
-source_project_functions(root)
-create_output_directories(root)
+# FIGURE 3: PROTEOMIC RESPONSE AFTER VACCINE DOSE 1 ----
+#
+# Purpose:
+#   Compare baseline samples (V0) with samples collected more than 7 days after
+#   Dose 1 (V1), while modeling protein abundance across gestational age.
+#
+# Manuscript panels:
+#   A  Heatmap of Dose 1-associated protein changes across gestation
+#   B  Example protein trajectories
+#   C  KEGG pathway enrichment across gestational weeks
+#
+# Input:
+#   data/processed/comb_v0_vax.rds
+#   data/processed/aptamer_annotations.rds
+#   Figure_3/pathways_shown.csv
+#
+# Output:
+#   results/figures/figure_03/
+#   results/tables/figure_03/
+#
+# Run from the repository folder with:
+#   Rscript Figure_3/figure_3.R
 
-parameters <- analysis_parameters()
-set.seed(parameters$seed)
-inputs <- load_analysis_inputs(root)
-paths <- figure_paths(3, root)
-cache <- file.path(paths$cache, paste0("nperm_", parameters$n_perm, "_k", parameters$gam_k))
 
-analysis <- run_vaccine_gam_analysis(
-  inputs$samples,
-  inputs$proteins,
-  dose = "V1",
-  n_perm = parameters$n_perm,
-  k = parameters$gam_k,
-  cores = parameters$cores,
-  seed = parameters$seed,
-  cache_dir = cache
+# 1. Load functions, settings, and data ----
+
+project_directory <- getwd()
+if (!file.exists(file.path(project_directory, "DESCRIPTION"))) {
+  stop("Run this script from the MOMI_EDLOW_proteomics repository folder.", call. = FALSE)
+}
+
+source(file.path(project_directory, "helpful_functions", "data_and_setup.R"))
+source_analysis_functions(project_directory)
+create_output_directories(project_directory)
+
+settings <- analysis_parameters()
+set.seed(settings$seed)
+
+study_data <- load_analysis_inputs(project_directory)
+output <- figure_output_folders(3, project_directory)
+
+
+# 2. Dose 1 versus baseline GAM permutation analysis ----
+
+dose_1_cache <- file.path(
+  output$cache,
+  paste0("nperm_", settings$n_perm, "_k", settings$gam_k)
 )
-statistics <- analysis$stats
-statistics$gene <- gene_symbols(statistics$protein, inputs$annotations)
-save_table(statistics, file.path(paths$tables, "dose1_vs_baseline_gam_permutation.csv"))
 
-selected <- vaccine_panel_proteins(analysis, inputs$annotations)
-if (!length(selected)) selected <- head(statistics$protein[order(statistics$pvalue)], 13L)
-masked_log2fc <- mask_unobserved_weeks(analysis$log2fc, analysis$baseline, analysis$vaccinated)
-panel_a <- plot_log2fc_heatmap(
-  masked_log2fc,
-  inputs$annotations,
-  selected,
+dose_1_results <- run_vaccine_gam_analysis(
+  study_data$samples,
+  study_data$proteins,
+  dose = "V1",
+  n_perm = settings$n_perm,
+  k = settings$gam_k,
+  cores = settings$cores,
+  seed = settings$seed,
+  cache_dir = dose_1_cache
+)
+
+dose_1_statistics <- dose_1_results$stats
+dose_1_statistics$gene <- gene_symbols(
+  dose_1_statistics$protein,
+  study_data$annotations
+)
+save_table(
+  dose_1_statistics,
+  file.path(output$tables, "dose1_vs_baseline_gam_permutation.csv")
+)
+
+
+# 3. Protein heatmap across gestation (Figure 3A) ----
+
+proteins_shown <- vaccine_panel_proteins(
+  dose_1_results,
+  study_data$annotations
+)
+if (!length(proteins_shown)) {
+  proteins_shown <- head(
+    dose_1_statistics$protein[order(dose_1_statistics$pvalue)],
+    13L
+  )
+}
+
+observed_log2fc <- mask_unobserved_weeks(
+  dose_1_results$log2fc,
+  dose_1_results$baseline,
+  dose_1_results$vaccinated
+)
+
+figure_3a <- plot_log2fc_heatmap(
+  observed_log2fc,
+  study_data$annotations,
+  proteins_shown,
   "Differentially expressed proteins after Dose 1"
 )
-save_plot(panel_a, file.path(paths$plots, "figure_03A_dose1_log2fc_heatmap.pdf"), 8, 4)
-
-panel_b_proteins <- proteins_for_genes(
-  c("IL1RL1", "CXCL3", "ZNF174"),
-  inputs$annotations,
-  rownames(analysis$log2fc)
+save_plot(
+  figure_3a,
+  file.path(output$plots, "figure_03A_dose1_log2fc_heatmap.pdf"),
+  8,
+  4
 )
-panel_b <- plot_vaccine_proteins(analysis$comparison, panel_b_proteins, inputs$annotations, "V1")
-save_plot(panel_b, file.path(paths$plots, "figure_03B_dose1_protein_trajectories.pdf"), 9, 3)
 
-representatives <- choose_representative_aptamers(inputs$samples, inputs$proteins, inputs$annotations)
-observed_columns <- colSums(!is.na(masked_log2fc)) > 0
-gsea <- run_gsea_matrix(analysis$log2fc[, observed_columns, drop = FALSE], representatives, parameters$seed)
-save_table(gsea, file.path(paths$tables, "dose1_kegg_gsea_all_weeks.csv"))
-pathway_panel <- readr::read_csv(file.path(root, "Figure_3", "pathways_shown.csv"), show_col_types = FALSE)
-panel_results <- filter_pathway_panel(gsea, pathway_panel, fdr = 0.25)
-save_table(panel_results, file.path(paths$tables, "dose1_kegg_gsea_main_figure_panel.csv"))
-panel_c <- plot_gsea_bubbles(panel_results, "Dose 1 versus baseline KEGG GSEA")
-save_plot(panel_c, file.path(paths$plots, "figure_03C_dose1_kegg_gsea.pdf"), 10, 6)
 
-message("Figure 3 panels written to: ", paths$plots)
+# 4. Example protein trajectories (Figure 3B) ----
+
+example_proteins <- proteins_for_genes(
+  c("IL1RL1", "CXCL3", "ZNF174"),
+  study_data$annotations,
+  rownames(dose_1_results$log2fc)
+)
+
+figure_3b <- plot_vaccine_proteins(
+  dose_1_results$comparison,
+  example_proteins,
+  study_data$annotations,
+  dose = "V1"
+)
+save_plot(
+  figure_3b,
+  file.path(output$plots, "figure_03B_dose1_protein_trajectories.pdf"),
+  9,
+  3
+)
+
+
+# 5. KEGG pathway enrichment across gestation (Figure 3C) ----
+
+representative_aptamers <- choose_representative_aptamers(
+  study_data$samples,
+  study_data$proteins,
+  study_data$annotations
+)
+
+weeks_with_data <- colSums(!is.na(observed_log2fc)) > 0
+dose_1_gsea <- run_gsea_matrix(
+  dose_1_results$log2fc[, weeks_with_data, drop = FALSE],
+  representative_aptamers,
+  settings$seed
+)
+save_table(
+  dose_1_gsea,
+  file.path(output$tables, "dose1_kegg_gsea_all_weeks.csv")
+)
+
+pathways_shown <- readr::read_csv(
+  file.path(project_directory, "Figure_3", "pathways_shown.csv"),
+  show_col_types = FALSE
+)
+figure_pathway_results <- filter_pathway_panel(
+  dose_1_gsea,
+  pathways_shown,
+  fdr = 0.25
+)
+save_table(
+  figure_pathway_results,
+  file.path(output$tables, "dose1_kegg_gsea_main_figure_panel.csv")
+)
+
+figure_3c <- plot_gsea_bubbles(
+  figure_pathway_results,
+  "Dose 1 versus baseline KEGG GSEA"
+)
+save_plot(
+  figure_3c,
+  file.path(output$plots, "figure_03C_dose1_kegg_gsea.pdf"),
+  10,
+  6
+)
+
+message("Figure 3 is complete. Files were written to: ", output$plots)

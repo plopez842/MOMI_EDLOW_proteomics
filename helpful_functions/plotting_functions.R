@@ -1,7 +1,17 @@
+# MANUSCRIPT PLOTTING FUNCTIONS ----
+#
+# This file contains the shared colors, ggplot theme, file-saving function, and
+# plotting functions used by Figures 1-5. Statistical models are kept in
+# statistical_models.R so plots and analysis code remain separate.
+
+
+# Shared colors and visual style ----
+
 trimester_colors <- c("1st" = "#6A9BD4", "2nd" = "#F5C242", "3rd" = "#E76F51")
 vaccine_colors <- c("V0" = "#A7A9AC", "V1" = "#1B9E77", "V2" = "#756BB1")
 nes_colors <- c(low = "#3B2C85", mid = "#F7F7F7", high = "#D7301F")
 
+# Apply a consistent publication theme to all ggplots.
 theme_manuscript <- function(base_size = 10) {
   ggplot2::theme_classic(base_size = base_size) +
     ggplot2::theme(
@@ -14,11 +24,15 @@ theme_manuscript <- function(base_size = 10) {
     )
 }
 
+# Save a plot as a PDF and create its parent folder if needed.
 save_plot <- function(plot, path, width, height, dpi = 300) {
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   ggplot2::ggsave(path, plot = plot, width = width, height = height, units = "in", dpi = dpi)
   invisible(path)
 }
+
+
+# Figure 1: PLSDA, trajectories, SOM, and Reactome ----
 
 plot_plsda_scores <- function(scores, trimester) {
   columns <- names(scores)[seq_len(min(2L, ncol(scores)))]
@@ -35,6 +49,7 @@ plot_plsda_scores <- function(scores, trimester) {
     theme_manuscript()
 }
 
+# Plot VIP scores and color each protein by its trimester of highest abundance.
 plot_vip_scores <- function(vip, x_scaled, trimester, annotations, minimum = 1) {
   vip_data <- data.frame(protein = names(vip), VIP = as.numeric(vip))
   vip_data <- vip_data[vip_data$VIP >= minimum, , drop = FALSE]
@@ -54,6 +69,7 @@ plot_vip_scores <- function(vip, x_scaled, trimester, annotations, minimum = 1) 
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 7))
 }
 
+# Plot one PLSDA loading vector and its direction of trimester enrichment.
 plot_plsda_loadings <- function(loadings, x_scaled, trimester, annotations, component = 1L) {
   column <- names(loadings)[component]
   plot_data <- data.frame(
@@ -74,6 +90,7 @@ plot_plsda_loadings <- function(loadings, x_scaled, trimester, annotations, comp
     theme_manuscript(base_size = 8)
 }
 
+# Plot gestational trajectories for the top PLSDA proteins.
 plot_top_protein_trajectories <- function(samples, proteins, annotations, n = 6L) {
   selected <- head(proteins, n)
   plots <- lapply(selected, function(protein) {
@@ -96,6 +113,7 @@ plot_top_protein_trajectories <- function(samples, proteins, annotations, n = 6L
   patchwork::wrap_plots(plots, ncol = 2) + patchwork::plot_annotation()
 }
 
+# Save the SOM codebook map using the base plotting method from kohonen.
 save_som_map <- function(som_result, path, palette = NULL) {
   clusters <- sort(unique(som_result$unit_cluster))
   if (is.null(palette)) palette <- grDevices::hcl.colors(length(clusters), "Spectral")
@@ -112,6 +130,7 @@ save_som_map <- function(som_result, path, palette = NULL) {
   invisible(path)
 }
 
+# Plot all standardized protein trajectories within each SOM cluster.
 plot_som_trajectories <- function(som_result, weeks = 8:40) {
   fitted <- som_result$scaled_fitted
   long <- as.data.frame(fitted)
@@ -128,6 +147,7 @@ plot_som_trajectories <- function(som_result, weeks = 8:40) {
     theme_manuscript(base_size = 8)
 }
 
+# Plot the Reactome pathways listed in Figure_1/pathways_shown.csv.
 plot_reactome_panel <- function(enrichment, panel) {
   data <- dplyr::inner_join(enrichment, panel, by = c("Description" = "pathway", "cluster" = "cluster_order"))
   data <- data[data$p.adjust < 0.25, , drop = FALSE]
@@ -141,6 +161,9 @@ plot_reactome_panel <- function(enrichment, panel) {
     ggplot2::theme(legend.position = "none")
 }
 
+
+# Figure 2: trimester differential abundance and pathway heatmap ----
+
 volcano_plot <- function(table, title, annotations, threshold = log2(1.5), fdr = 0.05, labels = 12L) {
   data <- as.data.frame(table)
   data$protein <- rownames(data)
@@ -148,7 +171,8 @@ volcano_plot <- function(table, title, annotations, threshold = log2(1.5), fdr =
   data$significant <- data$adj.P.Val < fdr & abs(data$logFC) > threshold
   rank_index <- order(data$adj.P.Val, -abs(data$logFC))
   data$label <- ""
-  data$label[head(rank_index[data$significant[rank_index]], labels)] <- data$gene[head(rank_index[data$significant[rank_index]], labels)]
+  label_rows <- head(rank_index[data$significant[rank_index]], labels)
+  data$label[label_rows] <- data$gene[label_rows]
 
   ggplot2::ggplot(data, ggplot2::aes(.data$logFC, -log10(.data$adj.P.Val))) +
     ggplot2::geom_point(ggplot2::aes(colour = .data$significant), size = 1.1) +
@@ -160,6 +184,27 @@ volcano_plot <- function(table, title, annotations, threshold = log2(1.5), fdr =
     theme_manuscript(base_size = 9)
 }
 
+# Plot selected KEGG pathways across between- and within-trimester comparisons.
+plot_pathway_heatmap <- function(panel_results, title = "KEGG pathway enrichment") {
+  data <- panel_results
+  data$comparison <- factor(data$comparison, levels = unique(data$comparison))
+  data$Description <- factor(data$Description, levels = rev(unique(data$Description[order(data$display_order)])))
+  ggplot2::ggplot(data, ggplot2::aes(.data$comparison, .data$Description, fill = .data$NES)) +
+    ggplot2::geom_tile(colour = "grey60", linewidth = 0.2) +
+    ggplot2::geom_text(ggplot2::aes(label = ifelse(.data$significant, "*", "")), size = 2.5) +
+    ggplot2::facet_grid(category ~ ., scales = "free_y", space = "free_y") +
+    ggplot2::scale_fill_gradient2(
+      low = nes_colors[["low"]], mid = nes_colors[["mid"]], high = nes_colors[["high"]], midpoint = 0
+    ) +
+    ggplot2::labs(title = title, x = NULL, y = NULL, fill = "NES") +
+    theme_manuscript(base_size = 7) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1))
+}
+
+
+# Figures 3-4: vaccine response across gestation ----
+
+# Plot gestational-week log2 fold changes for selected proteins.
 plot_log2fc_heatmap <- function(log2fc, annotations, selected_proteins, title, limits = NULL) {
   selected_proteins <- intersect(selected_proteins, rownames(log2fc))
   matrix <- log2fc[selected_proteins, , drop = FALSE]
@@ -182,22 +227,7 @@ plot_log2fc_heatmap <- function(log2fc, annotations, selected_proteins, title, l
     theme_manuscript(base_size = 8)
 }
 
-plot_pathway_heatmap <- function(panel_results, title = "KEGG pathway enrichment") {
-  data <- panel_results
-  data$comparison <- factor(data$comparison, levels = unique(data$comparison))
-  data$Description <- factor(data$Description, levels = rev(unique(data$Description[order(data$display_order)])))
-  ggplot2::ggplot(data, ggplot2::aes(.data$comparison, .data$Description, fill = .data$NES)) +
-    ggplot2::geom_tile(colour = "grey60", linewidth = 0.2) +
-    ggplot2::geom_text(ggplot2::aes(label = ifelse(.data$significant, "*", "")), size = 2.5) +
-    ggplot2::facet_grid(category ~ ., scales = "free_y", space = "free_y") +
-    ggplot2::scale_fill_gradient2(
-      low = nes_colors[["low"]], mid = nes_colors[["mid"]], high = nes_colors[["high"]], midpoint = 0
-    ) +
-    ggplot2::labs(title = title, x = NULL, y = NULL, fill = "NES") +
-    theme_manuscript(base_size = 7) +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1))
-}
-
+# Plot significant pathway NES values as bubbles across gestational weeks/days.
 plot_gsea_bubbles <- function(panel_results, title = "KEGG GSEA") {
   data <- panel_results[panel_results$significant, , drop = FALSE]
   data$comparison <- factor(data$comparison, levels = unique(data$comparison))
@@ -214,6 +244,7 @@ plot_gsea_bubbles <- function(panel_results, title = "KEGG GSEA") {
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1))
 }
 
+# Plot observed protein abundance and fitted curves for baseline versus vaccine.
 plot_vaccine_proteins <- function(comparison, proteins, annotations, dose) {
   plots <- lapply(proteins, function(protein) {
     data <- data.frame(
@@ -235,14 +266,24 @@ plot_vaccine_proteins <- function(comparison, proteins, annotations, dose) {
   patchwork::wrap_plots(plots, nrow = 1, guides = "collect")
 }
 
+
+# Figure 5: acute response during days 1-7 ----
+
+# Plot the number of significantly enriched positive and negative pathways.
 plot_gsea_counts <- function(counts, dose) {
   ggplot2::ggplot(counts, ggplot2::aes(.data$comparison, .data$n_pathways, fill = .data$direction)) +
     ggplot2::geom_col(position = "identity", colour = "black") +
     ggplot2::scale_fill_manual(values = c("Negative" = "#24126A", "Positive" = "#C00000")) +
-    ggplot2::labs(title = paste("GSEA analysis for", dose), x = paste("Days post", dose), y = "Number of pathways", fill = "NES") +
+    ggplot2::labs(
+      title = paste("GSEA analysis for", dose),
+      x = paste("Days post", dose),
+      y = "Number of pathways",
+      fill = "NES"
+    ) +
     theme_manuscript(base_size = 9)
 }
 
+# Plot acute protein MoM values and fitted day-specific trajectories.
 plot_acute_proteins <- function(acute_result, proteins, annotations) {
   plots <- lapply(proteins, function(protein) {
     result <- acute_result$protein_results[[protein]]
@@ -261,7 +302,11 @@ plot_acute_proteins <- function(acute_result, proteins, annotations) {
       ) +
       ggplot2::scale_colour_manual(values = trimester_colors, name = "Trimester of Dose 1") +
       ggplot2::scale_x_continuous(breaks = 1:7) +
-      ggplot2::labs(title = gene_symbols(protein, annotations), x = paste("Days post", acute_result$dose), y = "log2(MoM)") +
+      ggplot2::labs(
+        title = gene_symbols(protein, annotations),
+        x = paste("Days post", acute_result$dose),
+        y = "log2(MoM)"
+      ) +
       theme_manuscript(base_size = 8)
   })
   patchwork::wrap_plots(plots, ncol = 2, guides = "collect")

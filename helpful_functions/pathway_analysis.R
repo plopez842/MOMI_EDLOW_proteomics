@@ -1,3 +1,15 @@
+# PATHWAY ANALYSIS FUNCTIONS ----
+#
+# This file maps SOMAmer measurements to UniProt identifiers and performs:
+#   - KEGG gene set enrichment analysis (GSEA)
+#   - Reactome over-representation analysis for SOM clusters
+#   - selection and summary of the pathways shown in manuscript figures
+
+
+# Choose one SOMAmer measurement per UniProt protein ----
+
+# When several aptamers map to one UniProt identifier, keep the aptamer with the
+# largest F statistic. If no F statistic is available, use the largest variance.
 choose_representative_aptamers <- function(samples, proteins, annotations) {
   mapping <- annotations[match(proteins, annotations$AptName), , drop = FALSE]
   mapping <- mapping[!is.na(mapping$Single_UniPro) & nzchar(mapping$Single_UniPro), , drop = FALSE]
@@ -14,6 +26,10 @@ choose_representative_aptamers <- function(samples, proteins, annotations) {
   mapping[!duplicated(mapping$Single_UniPro), , drop = FALSE]
 }
 
+
+# KEGG gene set enrichment analysis ----
+
+# Convert an aptamer-level statistic into a ranked UniProt vector.
 prepare_uniprot_ranks <- function(aptamer_values, representative_mapping) {
   values <- as.numeric(aptamer_values)
   names(values) <- names(aptamer_values)
@@ -29,6 +45,7 @@ prepare_uniprot_ranks <- function(aptamer_values, representative_mapping) {
   sort(ranked, decreasing = TRUE)
 }
 
+# Run KEGG GSEA for one ranked protein list.
 run_kegg_gsea <- function(ranked_uniprot, seed = 1010L) {
   if (length(ranked_uniprot) < 50L) return(data.frame())
   set.seed(seed)
@@ -45,6 +62,7 @@ run_kegg_gsea <- function(ranked_uniprot, seed = 1010L) {
   as.data.frame(result)
 }
 
+# Run KEGG GSEA for every column of a protein-by-comparison matrix.
 run_gsea_matrix <- function(value_matrix, representative_mapping, seed = 1010L) {
   value_matrix <- as.matrix(value_matrix)
   results <- lapply(seq_len(ncol(value_matrix)), function(index) {
@@ -57,6 +75,9 @@ run_gsea_matrix <- function(value_matrix, representative_mapping, seed = 1010L) 
   })
   dplyr::bind_rows(results)
 }
+
+
+# Reactome enrichment for Figure 1 SOM clusters ----
 
 run_reactome_ora <- function(protein_clusters, representative_mapping) {
   mapping <- representative_mapping[
@@ -99,6 +120,10 @@ run_reactome_ora <- function(protein_clusters, representative_mapping) {
   dplyr::bind_rows(results)
 }
 
+
+# Prepare pathway results for manuscript plots ----
+
+# Keep the pathways listed beside each figure script in pathways_shown.csv.
 filter_pathway_panel <- function(gsea_results, panel, fdr = 0.25) {
   if (!nrow(gsea_results)) return(gsea_results)
   output <- dplyr::inner_join(
@@ -110,6 +135,7 @@ filter_pathway_panel <- function(gsea_results, panel, fdr = 0.25) {
   output
 }
 
+# Count significantly positive and negative GSEA results for each day/week.
 summarize_gsea_directions <- function(gsea_results, fdr = 0.25) {
   gsea_results |>
     dplyr::filter(.data$p.adjust < fdr) |>

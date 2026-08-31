@@ -1,3 +1,16 @@
+# PREGNANCY AND VACCINE ANALYSIS HELPERS ----
+#
+# This file prepares the specific comparisons used in Figures 2-5:
+#   - baseline trimester contrasts
+#   - weekly baseline changes within trimester
+#   - observed weeks in baseline-versus-vaccine comparisons
+#   - manuscript protein selections
+#   - daily acute median-of-medians matrices
+
+
+# Figure 2: baseline trimester comparisons ----
+
+# Fit limma contrasts between all three pairs of collection trimesters.
 baseline_trimester_limma <- function(samples, proteins) {
   baseline <- samples[samples$Timepoint_v1 == "V0", , drop = FALSE]
   expression <- t(as.matrix(baseline[, proteins, drop = FALSE]))
@@ -19,6 +32,7 @@ baseline_trimester_limma <- function(samples, proteins) {
   list(baseline = baseline, tables = tables)
 }
 
+# Fit one baseline gestational GAM per protein and predict weekly abundance.
 baseline_weekly_predictions <- function(samples, proteins, k = 8L, cores = 1L) {
   baseline <- samples[samples$Timepoint_v1 == "V0", , drop = FALSE]
   weeks <- 8:40
@@ -32,6 +46,7 @@ baseline_weekly_predictions <- function(samples, proteins, k = 8L, cores = 1L) {
   fitted
 }
 
+# Express each predicted week relative to the first week of its trimester.
 within_trimester_log2fc <- function(fitted) {
   weeks <- as.integer(sub("W", "", colnames(fitted)))
   starts <- ifelse(weeks < 14, 8L, ifelse(weeks < 28, 14L, 28L))
@@ -44,6 +59,7 @@ within_trimester_log2fc <- function(fitted) {
   output
 }
 
+# Combine limma log2 fold changes into one protein-by-comparison matrix for GSEA.
 trimester_contrast_matrix <- function(limma_tables) {
   matrix <- do.call(cbind, lapply(limma_tables, function(table) table$logFC))
   rownames(matrix) <- rownames(limma_tables[[1]])
@@ -51,6 +67,10 @@ trimester_contrast_matrix <- function(limma_tables) {
   matrix
 }
 
+
+# Figures 3-4: vaccine comparisons ----
+
+# Hide weeks that lack both baseline and vaccinated samples from the heatmaps.
 mask_unobserved_weeks <- function(log2fc, baseline, vaccinated) {
   weeks <- as.integer(sub("W", "", colnames(log2fc)))
   baseline_weeks <- floor(baseline$GA_collection_days / 7)
@@ -61,6 +81,7 @@ mask_unobserved_weeks <- function(log2fc, baseline, vaccinated) {
   output
 }
 
+# Translate human-readable gene symbols into SOMAmer identifiers.
 proteins_for_genes <- function(genes, annotations, available = NULL) {
   matches <- annotations$AptName[match(genes, annotations$EntrezGeneSymbol)]
   names(matches) <- genes
@@ -69,6 +90,7 @@ proteins_for_genes <- function(genes, annotations, available = NULL) {
   unname(matches)
 }
 
+# Select the significant proteins used in the Dose 1 and Dose 2 heatmaps.
 vaccine_panel_proteins <- function(analysis, annotations) {
   dose <- analysis$dose
   if (dose == "V1") {
@@ -81,6 +103,10 @@ vaccine_panel_proteins <- function(analysis, annotations) {
   selected
 }
 
+
+# Figure 5: acute response ----
+
+# Average each protein's acute MoM values within post-vaccination day.
 daily_acute_mom_matrix <- function(acute_result) {
   days <- sort(unique(acute_result$acute[[acute_result$days_column]]))
   proteins <- names(acute_result$protein_results)
@@ -94,6 +120,7 @@ daily_acute_mom_matrix <- function(acute_result) {
   output
 }
 
+# Return a readable table of significant acute-response proteins.
 significant_protein_table <- function(stats, annotations, fdr = 0.25) {
   output <- stats[stats$fdr < fdr, , drop = FALSE]
   output$gene <- gene_symbols(output$protein, annotations)
